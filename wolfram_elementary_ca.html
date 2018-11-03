@@ -1,0 +1,223 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Wolfram Elementary CA</title>
+    <link href="https://fonts.googleapis.com/css?family=PT+Mono" rel="stylesheet">
+    <style>
+      html, body { margin: 0px; }
+
+      .userInput { width: 15px; vertical-align: top; font-family: 'PT Mono', monospace; text-align: center; }
+
+      #drawBtn {
+          vertical-align: top;
+          background-color: gray;
+          border: none;
+          color: white;
+          padding: 1.5px 14px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-family: 'PT Mono', monospace;
+          font-size: 15px;
+      }
+      #drawBtn:hover {
+          background-color: white;
+          color: rgba(0, 0, 0, 0.5);
+          border-style: solid;
+          border-color: rgba(0, 0, 0, 0.5);
+          border-width: 0.5px;
+      }
+
+      #topBar { margin: 15px; width: 100%; }
+
+      #svgWindow { display: block; }
+    </style>
+  </head>
+  <body>
+    <div id="topBar">
+      <input type="text" id="0" class="userInput" maxlength="1" onkeydown="limit(this);" onkeyup="limit(this);"></input>
+      <input type="text" id="1" class="userInput" maxlength="1" onkeydown="limit(this);" onkeyup="limit(this);"></input>
+      <input type="text" id="2" class="userInput" maxlength="1" onkeydown="limit(this);" onkeyup="limit(this);"></input>
+      <input type="text" id="3" class="userInput" maxlength="1" onkeydown="limit(this);" onkeyup="limit(this);"></input>
+      <input type="text" id="4" class="userInput" maxlength="1" onkeydown="limit(this);" onkeyup="limit(this);"></input>
+      <input type="text" id="5" class="userInput" maxlength="1" onkeydown="limit(this);" onkeyup="limit(this);"></input>
+      <input type="text" id="6" class="userInput" maxlength="1" onkeydown="limit(this);" onkeyup="limit(this);"></input>
+      <input type="text" id="7" class="userInput" maxlength="1" onkeydown="limit(this);" onkeyup="limit(this);"></input>
+      <button id="drawBtn" onclick="changeState()">Set</button>
+    </div>
+
+      <svg id="svgWindow" style="width:100%; height:100%;"></svg>
+
+    <script>
+
+      var svgns = "http://www.w3.org/2000/svg";
+      var svgSurface = document.getElementById('svgWindow');
+
+      // make sure svg scales
+      svgSurface.setAttribute("width",  window.innerWidth);
+      svgSurface.setAttribute("height", window.innerHeight);
+
+      // get width and height for calculations
+      var dimensions = svgSurface.getBoundingClientRect();
+      var w = dimensions.width;
+      var h = dimensions.height;
+
+      // set tile color template
+      var colorTemplate = [
+          { pct: 0.0, color: { r: 0xff, g: 0x00, b: 0 } },
+          { pct: 0.5, color: { r: 0xff, g: 0xff, b: 0 } },
+          { pct: 1.0, color: { r: 0x00, g: 0xff, b: 0 } }
+        ];
+
+      // initialize a default ruleset
+      var ruleset = [1, 0, 0, 0, 0, 0, 0, 1];
+      // initialize generation 0
+      var genZero = initialGeneration(w, 10);
+      // create new generations
+      var cellMap = newGenerations(h, genZero);
+      // render
+      draw(cellMap);
+
+      function limit(element){
+          if(element.value != 0 && element.value != 1) {
+              element.value = 0
+          }
+          console.log(element.value);
+      }
+
+      // onclick trigger
+      function changeState(){
+          // clear SVG surface
+          clearSurface(svgSurface);
+          // read input fields
+          changeRuleset();
+          // initialize generation 0
+          var genZero = initialGeneration(w, 10);
+          // calculate consecutive generations
+          var cellMap = newGenerations(h, genZero);
+          // render tiles
+          draw(cellMap);
+      };
+
+      // clear SVG surface
+      function clearSurface(surface){
+          var elem = document.getElementById("svgWindow");
+          elem.innerHTML = '';
+      };
+
+      // read input fields
+      function changeRuleset(){
+          for(var i = 0; i < ruleset.length; i++){
+              ruleset[i] = document.getElementById(i + '').value
+          }
+      };
+
+      // render tiles
+      function draw(map){
+        for(var i = 0; i < map.length; i++){
+            for(var n = 0; n < map[i].length; n++){
+              if(map[i][n] == 1){
+                  document.getElementById('svgWindow').appendChild(createTile(n*10, i*10, colorToPercentage(i/n)));
+                };
+              if(map[i][n] == 0){
+                  document.getElementById('svgWindow').appendChild(createTile(n*10, i*10, 'gray'));
+                };
+              };
+        };
+      };
+
+      // set generation 0
+      function initialGeneration(width, tileSize){
+          var gen = Array(Math.floor(width/tileSize));
+          for (var i = 0; i < gen.length; i++) {
+              gen[i] = 0;
+          }
+          gen[gen.length/2] = 1;
+          gen[gen.length-1] = null;
+          gen[0] = null;
+          return gen;
+      };
+
+      // generate consecutive generations
+      function newGenerations(height, previousgen){
+          var map = [ previousgen ];
+          for(var i = 0; i < h/10; i++){
+              var nextgen = Array(previousgen.length);
+                  for (var n = 1; n < previousgen.length-1; n++) {
+                      var left   = previousgen[n-1];   // left neighbor state
+                      var me     = previousgen[n];     // current state
+                      var right  = previousgen[n+1];   // right neighbor state
+                      nextgen[n] = rules(left, me, right); // compute next generation state based on ruleset
+                  }
+              map.push(nextgen);
+              previousgen = nextgen;
+          }
+          return map;
+      };
+
+      // CA ruleset table
+      function rules(a, b, c) {
+            switch (true) {
+              case (a == 1 && b == 1 && c == 1):
+                return ruleset[0];
+                break;
+              case (a == 1 && b == 1 && c == 0):
+                return ruleset[1];
+                break;
+              case (a == 1 && b == 0 && c == 1):
+                return ruleset[2];
+                break;
+              case (a == 1 && b == 0 && c == 0):
+                return ruleset[3];
+                break;
+              case (a == 0 && b == 1 && c == 1):
+                return ruleset[4];
+                break;
+              case (a == 0 && b == 1 && c == 0):
+                return ruleset[5];
+                break;
+              case (a == 0 && b == 0 && c == 1):
+                return ruleset[6];
+                break;
+              case (a == 0 && b == 0 && c == 0):
+                return ruleset[7];
+                break;
+              }
+              return 0;
+      };
+
+      // create and position rect
+      function createTile(x, y, color){
+          var tile = document.createElementNS(svgns, "rect");
+          tile.setAttribute("fill", color);
+          tile.setAttribute("width", "9");
+          tile.setAttribute("height", "9");
+          tile.setAttribute("x", x);
+          tile.setAttribute("y", y);
+          return tile;
+      };
+
+      // get RGB colors
+      function colorToPercentage(pct){
+          for (var i = 1; i < colorTemplate.length - 1; i++) {
+              if (pct <= colorTemplate[i].pct) {
+                  break;
+              }
+          }
+          var lower = colorTemplate[i - 1];
+          var upper = colorTemplate[i];
+          var range = upper.pct - lower.pct;
+          var rangePct = (pct - lower.pct) / range;
+          var pctLower = 1 - rangePct;
+          var pctUpper = rangePct;
+          var color = {
+              r: Math.floor(lower.color.r * pctLower + upper.color.r * pctUpper),
+              g: Math.floor(lower.color.g * pctLower + upper.color.g * pctUpper),
+              b: Math.floor(lower.color.b * pctLower + upper.color.b * pctUpper)
+          };
+          return 'rgb(' + [color.r, color.g, color.b].join(',') + ')';
+      };
+
+    </script>
+  </body>
+</html>
