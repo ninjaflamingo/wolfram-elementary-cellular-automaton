@@ -117,7 +117,7 @@
         for(var i = 0; i < map.length; i++){
             for(var n = 0; n < map[i].length; n++){
               if(map[i][n] == 1){
-                  document.getElementById('svgWindow').appendChild(createTile(n*10, i*10, colorToPercentage(i)));
+                  document.getElementById('svgWindow').appendChild(createTile(n*10, i*10, colorToPercentage(i/n)));
                 };
               if(map[i][n] == 0){
                   document.getElementById('svgWindow').appendChild(createTile(n*10, i*10, 'gray'));
